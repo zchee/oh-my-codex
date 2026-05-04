@@ -147,7 +147,7 @@ fn summary_mode_uses_local_api_and_model_override() {
     let output = Command::new(sparkshell_bin())
         .env("OMX_API_BASE_URL", base_url)
         .env("OMX_SPARKSHELL_LINES", "1")
-        .env("OMX_SPARKSHELL_MODEL", "spark-test-model")
+        .env("OMX_SPARKSHELL_MODEL", "gpt-5.6-luna")
         .arg("sh")
         .arg("-c")
         .arg("printf 'one\ntwo\n'")
@@ -163,7 +163,7 @@ fn summary_mode_uses_local_api_and_model_override() {
 
     let request = request_log.lock().expect("request log");
     assert!(request.starts_with("POST /v1/responses HTTP/1.1"));
-    assert!(request.contains("\"model\":\"spark-test-model\""));
+    assert!(request.contains("\"model\":\"gpt-5.6-luna\""));
     assert!(request.contains("\"reasoning\":{\"effort\":\"low\"}"));
     assert!(request.contains("Command family: generic-shell"));
     assert!(request.contains("<<<STDOUT"));

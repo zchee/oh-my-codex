@@ -302,7 +302,11 @@ fn invoke_codex(args: &Args, model: &str, prompt_contract: &str) -> io::Result<A
         .arg("-s")
         .arg("read-only")
         .arg("-c")
-        .arg("model_reasoning_effort=\"low\"")
+        .arg("model_reasoning_effort=\"low\"");
+    if model == args.spark_model {
+        command.arg("-c").arg("model_reasoning_summary=\"none\"");
+    }
+    command
         .arg("-c")
         .arg(format!(
             "model_instructions_file=\"{}\"",
@@ -2480,6 +2484,13 @@ printf '# Answer\nok\n' > "$output_path"
             captured.contains(&expected),
             "expected {:?} in {:?}",
             expected,
+            captured
+        );
+        let expected2 = "model_reasoning_summary=\"none\"";
+        assert!(
+            captured.contains(expected2),
+            "expected {:?} in {:?}",
+            expected2,
             captured
         );
     }

@@ -7,6 +7,7 @@ import { join, relative, dirname } from 'path';
 import { tmpdir } from 'os';
 import { existsSync } from 'fs';
 import { HUD_TMUX_TEAM_HEIGHT_LINES } from '../../hud/constants.js';
+import { DEFAULT_SPARK_MODEL } from '../../config/models.js';
 import {
   DEFAULT_MAX_WORKERS,
   initTeamState,
@@ -915,7 +916,10 @@ describe('runtime', () => {
       { OMX_TEAM_WORKER_LAUNCH_ARGS: '--no-alt-screen' },
       'explore',
     );
-    assert.deepEqual(args, ['--no-alt-screen', '--model', expectedLowComplexityModel()]);
+    assert.deepEqual(
+      args,
+      ['--no-alt-screen', '-c', 'model_reasoning_summary="none"', '--model', expectedLowComplexityModel()],
+    );
   });
 
   it('keeps an explicit direct policy authoritative while preserving inherited model and role reasoning', () => {
@@ -1482,7 +1486,10 @@ require('fs').writeFileSync(process.env.OMX_NON_CODEX_CAPTURE, process.argv.slic
       { OMX_TEAM_WORKER_LAUNCH_ARGS: '--no-alt-screen' },
       'executor-low',
     );
-    assert.deepEqual(args, ['--no-alt-screen', '--model', expectedLowComplexityModel()]);
+    assert.deepEqual(
+      args,
+      ['--no-alt-screen', '-c', 'model_reasoning_summary="none"', '--model', expectedLowComplexityModel()],
+    );
   });
 
   it('resolveWorkerLaunchArgsFromEnv preserves explicit model in either syntax', () => {
@@ -1506,6 +1513,24 @@ require('fs').writeFileSync(process.env.OMX_NON_CODEX_CAPTURE, process.argv.slic
         'codex',
       ),
       ['-c', 'model_reasoning_effort="high"', '--model', 'explicit-worker-model'],
+    );
+  });
+
+  it('resolveWorkerLaunchArgsFromEnv forces spark reasoning summary to none exactly once', () => {
+    const args = resolveWorkerLaunchArgsFromEnv(
+      { OMX_TEAM_WORKER_LAUNCH_ARGS: `--model ${DEFAULT_SPARK_MODEL} -c model_reasoning_summary="concise"` },
+      'explore',
+    );
+    const joined = args.join(' ');
+
+    assert.deepEqual(
+      args,
+      ['-c', 'model_reasoning_summary="none"', '--model', DEFAULT_SPARK_MODEL],
+    );
+    assert.equal(
+      joined.match(/model_reasoning_summary/g)?.length ?? 0,
+      1,
+      'reasoning summary override should appear exactly once',
     );
   });
 
@@ -1575,7 +1600,15 @@ require('fs').writeFileSync(process.env.OMX_NON_CODEX_CAPTURE, process.argv.slic
       );
       assert.deepEqual(
         args,
-        ['--no-alt-screen', '-c', 'model_reasoning_effort="high"', '--model', expectedLowComplexityModel()],
+        [
+          '--no-alt-screen',
+          '-c',
+          'model_reasoning_summary="none"',
+          '-c',
+          'model_reasoning_effort="high"',
+          '--model',
+          expectedLowComplexityModel(),
+        ],
       );
     } finally {
       console.log = originalLog;
@@ -1597,7 +1630,15 @@ require('fs').writeFileSync(process.env.OMX_NON_CODEX_CAPTURE, process.argv.slic
       );
       assert.deepEqual(
         args,
-        ['--no-alt-screen', '-c', 'model_reasoning_effort="high"', '--model', expectedLowComplexityModel()],
+        [
+          '--no-alt-screen',
+          '-c',
+          'model_reasoning_summary="none"',
+          '-c',
+          'model_reasoning_effort="high"',
+          '--model',
+          expectedLowComplexityModel(),
+        ],
       );
     } finally {
       console.log = originalLog;
@@ -2223,7 +2264,10 @@ esac
         { OMX_TEAM_WORKER_LAUNCH_ARGS: '--no-alt-screen' },
         'explore',
       );
-      assert.deepEqual(args, ['--no-alt-screen', '--model', expectedLowComplexityModel()]);
+      assert.deepEqual(
+        args,
+        ['--no-alt-screen', '-c', 'model_reasoning_summary="none"', '--model', expectedLowComplexityModel()],
+      );
     } finally {
       console.log = originalLog;
     }
@@ -5657,6 +5701,7 @@ process.on('SIGTERM', () => process.exit(0));
     const prevLaunchMode = process.env.OMX_TEAM_WORKER_LAUNCH_MODE;
     const prevWorkerCli = process.env.OMX_TEAM_WORKER_CLI;
     const prevCaptureDir = process.env.OMX_ARGV_CAPTURE_DIR;
+    const prevWorkerLaunchArgs = process.env.OMX_TEAM_WORKER_LAUNCH_ARGS;
     const prevStandardModel = process.env.OMX_DEFAULT_STANDARD_MODEL;
 
     process.env.PATH = `${binDir}:${prevPath ?? ''}`;
@@ -5664,6 +5709,7 @@ process.on('SIGTERM', () => process.exit(0));
     process.env.OMX_TEAM_WORKER_LAUNCH_MODE = 'prompt';
     process.env.OMX_TEAM_WORKER_CLI = 'codex';
     process.env.OMX_ARGV_CAPTURE_DIR = captureDir;
+    delete process.env.OMX_TEAM_WORKER_LAUNCH_ARGS;
     delete process.env.OMX_DEFAULT_STANDARD_MODEL;
 
     let runtime: TeamRuntime | null = null;
@@ -5755,6 +5801,8 @@ process.on('SIGTERM', () => process.exit(0));
       else delete process.env.OMX_TEAM_WORKER_CLI;
       if (typeof prevCaptureDir === 'string') process.env.OMX_ARGV_CAPTURE_DIR = prevCaptureDir;
       else delete process.env.OMX_ARGV_CAPTURE_DIR;
+      if (typeof prevWorkerLaunchArgs === 'string') process.env.OMX_TEAM_WORKER_LAUNCH_ARGS = prevWorkerLaunchArgs;
+      else delete process.env.OMX_TEAM_WORKER_LAUNCH_ARGS;
       if (typeof prevStandardModel === 'string') process.env.OMX_DEFAULT_STANDARD_MODEL = prevStandardModel;
       else delete process.env.OMX_DEFAULT_STANDARD_MODEL;
       await rm(cwd, { recursive: true, force: true });

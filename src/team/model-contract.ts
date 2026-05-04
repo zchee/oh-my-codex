@@ -17,6 +17,7 @@ const LONG_CONFIG_FLAG = '--config';
 const APPROVAL_POLICY_KEY = 'approval_policy';
 const SANDBOX_MODE_KEY = 'sandbox_mode';
 const REASONING_KEY = 'model_reasoning_effort';
+const REASONING_SUMMARY_KEY = 'model_reasoning_summary';
 const MODEL_PROVIDER_KEY = 'model_provider';
 export const TEAM_WORKER_APPROVAL_FLAG = '--ask-for-approval';
 export const TEAM_WORKER_SANDBOX_FLAG = '--sandbox';
@@ -42,6 +43,7 @@ export interface ParsedTeamWorkerLaunchArgs {
   sandboxValue: string | null;
   policyKind: TeamWorkerLaunchPolicyKind;
   reasoningOverride: string | null;
+  reasoningSummaryOverride: string | null;
   modelProviderOverride: string | null;
   modelOverride: string | null;
 }
@@ -81,6 +83,10 @@ function isConfigOverrideForKey(value: string, key: string): boolean {
 
 function isReasoningOverride(value: string): boolean {
   return isConfigOverrideForKey(value, REASONING_KEY);
+}
+
+function isReasoningSummaryOverride(value: string): boolean {
+  return isConfigOverrideForKey(value, REASONING_SUMMARY_KEY);
 }
 
 function isModelProviderOverride(value: string): boolean {
@@ -184,6 +190,10 @@ function resolveTeamWorkerLaunchDiagnosticsFromParts(params: {
     inheritedParentModel: Boolean(inheritedModel) && Boolean(selectedModel) && selectedModel === inheritedModel,
     actualLaunchArgs: [...params.actualLaunchArgs],
   };
+}
+
+function isSparkModel(model?: string | null): boolean {
+  return normalizeOptionalModel(model) === DEFAULT_SPARK_MODEL;
 }
 
 /**
@@ -382,6 +392,7 @@ export function parseTeamWorkerLaunchArgs(
   let approvalValue: string | null = null;
   let sandboxValue: string | null = null;
   let reasoningOverride: string | null = null;
+  let reasoningSummaryOverride: string | null = null;
   let modelProviderOverride: string | null = null;
   let modelOverride: string | null = null;
 
@@ -455,6 +466,10 @@ export function parseTeamWorkerLaunchArgs(
           reasoningOverride = configValue;
           continue;
         }
+        if (isReasoningSummaryOverride(configValue)) {
+          reasoningSummaryOverride = configValue;
+          continue;
+        }
         if (isModelProviderOverride(configValue)) {
           modelProviderOverride = configValue;
           continue;
@@ -501,6 +516,7 @@ export function parseTeamWorkerLaunchArgs(
     sandboxValue,
     policyKind,
     reasoningOverride,
+    reasoningSummaryOverride,
     modelProviderOverride,
     modelOverride,
   };
@@ -518,6 +534,7 @@ export function collectInheritableTeamWorkerArgs(codexArgs: string[]): string[] 
   const inherited: string[] = [];
   if (parsed.wantsBypass) inherited.push(CODEX_BYPASS_FLAG);
   if (parsed.modelProviderOverride) inherited.push(CONFIG_FLAG, parsed.modelProviderOverride);
+  if (parsed.reasoningSummaryOverride) inherited.push(CONFIG_FLAG, parsed.reasoningSummaryOverride);
   if (parsed.reasoningOverride) inherited.push(CONFIG_FLAG, parsed.reasoningOverride);
   if (parsed.modelOverride) inherited.push(MODEL_FLAG, parsed.modelOverride);
   return inherited;
@@ -546,15 +563,20 @@ export function normalizeTeamWorkerLaunchArgs(
     normalized.push(CODEX_BYPASS_FLAG);
   }
 
+  const normalizedPreferredReasoning = normalizeOptionalReasoning(preferredReasoning);
   const selectedReasoning = parsed.reasoningOverride
-    ?? (normalizeOptionalReasoning(preferredReasoning)
-      ? `${REASONING_KEY}="${normalizeOptionalReasoning(preferredReasoning)}"`
+    ?? (normalizedPreferredReasoning
+      ? `${REASONING_KEY}="${normalizedPreferredReasoning}"`
       : null);
   const selectedModelProvider = preferredModelProviderOverride ?? parsed.modelProviderOverride;
+  const selectedModel = normalizeOptionalModel(preferredModel) ?? normalizeOptionalModel(parsed.modelOverride);
+  const selectedReasoningSummary = isSparkModel(selectedModel)
+    ? `${REASONING_SUMMARY_KEY}="none"`
+    : parsed.reasoningSummaryOverride;
   if (selectedModelProvider) normalized.push(CONFIG_FLAG, canonicalizeConfigStringOverride(selectedModelProvider, MODEL_PROVIDER_KEY));
+  if (selectedReasoningSummary) normalized.push(CONFIG_FLAG, canonicalizeConfigStringOverride(selectedReasoningSummary, REASONING_SUMMARY_KEY));
   if (selectedReasoning) normalized.push(CONFIG_FLAG, selectedReasoning);
 
-  const selectedModel = normalizeOptionalModel(preferredModel) ?? normalizeOptionalModel(parsed.modelOverride);
   if (selectedModel) normalized.push(MODEL_FLAG, selectedModel);
 
   normalized.push(...parsed.passthrough.slice(endOfOptionsIndex));

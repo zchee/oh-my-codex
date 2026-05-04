@@ -117,7 +117,10 @@ describe('worker runtime identity contract', () => {
       { OMX_TEAM_WORKER_LAUNCH_ARGS: '--no-alt-screen' },
       'explore',
     );
-    assert.deepEqual(args, ['--no-alt-screen', '--model', expectedLowComplexityModel()]);
+    assert.deepEqual(
+      args,
+      ['--no-alt-screen', '-c', 'model_reasoning_summary="none"', '--model', expectedLowComplexityModel()],
+    );
   });
 
   it('startTeam preserves low-complexity assigned roles as outer runtime identities', async () => {
