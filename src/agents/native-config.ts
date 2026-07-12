@@ -18,6 +18,7 @@ import {
   getMainDefaultModel,
   getSparkDefaultModel,
   getStandardDefaultModel,
+  isReasoningSummaryUnsupportedModel,
 } from "../config/models.js";
 import { getRootModelName } from "../config/generator.js";
 import { codexAgentsDir } from "../utils/paths.js";
@@ -122,6 +123,7 @@ export interface GeneratedNativeAgentConfig {
   model?: string;
   modelProvider?: string;
   reasoningEffort?: "low" | "medium" | "high" | "xhigh";
+  reasoningSummary?: "none";
 }
 
 interface AgentModelResolutionOptions {
@@ -330,6 +332,9 @@ export function generateStandaloneAgentToml(
   if (config.reasoningEffort) {
     lines.push(`model_reasoning_effort = "${config.reasoningEffort}"`);
   }
+  if (config.reasoningSummary) {
+    lines.push(`model_reasoning_summary = "${config.reasoningSummary}"`);
+  }
   if (
     typeof config.developerInstructions === "string" &&
     config.developerInstructions.trim().length > 0
@@ -369,6 +374,7 @@ export function generateAgentToml(
     modelProvider: resolvedModelProvider,
     reasoningEffort: getAgentReasoningOverride(agent.name, options.codexHomeOverride)
       ?? agent.reasoningEffort,
+    reasoningSummary: isReasoningSummaryUnsupportedModel(resolvedModel) ? "none" : undefined,
   });
 }
 

@@ -35,7 +35,6 @@ const EXPLORE_SUBPROCESS_ENV_VARS_TO_SCRUB: &[&str] = &[
     "GREP_OPTIONS",
     "GREP_COLORS",
 ];
-const SPARK_MODEL: &str = "gpt-5.3-codex-spark";
 const WINDOWS_UNSUPPORTED_ALLOWLIST_MESSAGE: &str =
     "omx explore built-in harness is not ready on Windows because its allowlist runtime relies on POSIX sh/bash wrappers. Set OMX_EXPLORE_BIN to a compatible custom harness, prefer `omx sparkshell` for shell-native read-only lookups, or run `omx doctor` for readiness details.";
 
@@ -303,11 +302,12 @@ fn invoke_codex(args: &Args, model: &str, prompt_contract: &str) -> io::Result<A
         .arg("-s")
         .arg("read-only")
         .arg("-c")
-        .arg("model_reasoning_effort=\"low\"");
-    if model == SPARK_MODEL {
-        command.arg("-c").arg("model_reasoning_summary=\"none\"");
-    }
-    command
+        .arg("model_reasoning_effort=\"low\"")
+        // Spark-family models reject reasoning summaries and this harness never
+        // consumes them, so pin "none" for every attempt instead of inheriting
+        // the root config value.
+        .arg("-c")
+        .arg("model_reasoning_summary=\"none\"")
         .arg("-c")
         .arg(format!(
             "model_instructions_file=\"{}\"",

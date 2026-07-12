@@ -112,6 +112,22 @@ export function isKnownCodexModelAlias(model: string): model is KnownCodexModelA
 
 export const DEFAULT_TEAM_CHILD_MODEL = DEFAULT_STANDARD_MODEL;
 
+export const LEGACY_SPARK_MODEL = 'gpt-5.3-codex-spark';
+const REASONING_SUMMARY_UNSUPPORTED_MODELS: ReadonlySet<string> = new Set([
+  DEFAULT_SPARK_MODEL,
+  LEGACY_SPARK_MODEL,
+]);
+
+/**
+ * Spark-family models reject Responses API reasoning summaries, so launch
+ * surfaces must pin model_reasoning_summary="none" for them instead of
+ * inheriting the root config value.
+ */
+export function isReasoningSummaryUnsupportedModel(model?: string | null): boolean {
+  if (typeof model !== 'string') return false;
+  return REASONING_SUMMARY_UNSUPPORTED_MODELS.has(model.trim());
+}
+
 function normalizeConfiguredValue(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined;
   const trimmed = value.trim();

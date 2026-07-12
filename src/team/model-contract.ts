@@ -6,6 +6,7 @@ import {
   getMainDefaultModel,
   getSparkDefaultModel,
   getStandardDefaultModel,
+  isReasoningSummaryUnsupportedModel,
 } from '../config/models.js';
 
 const MADMAX_FLAG = '--madmax';
@@ -190,10 +191,6 @@ function resolveTeamWorkerLaunchDiagnosticsFromParts(params: {
     inheritedParentModel: Boolean(inheritedModel) && Boolean(selectedModel) && selectedModel === inheritedModel,
     actualLaunchArgs: [...params.actualLaunchArgs],
   };
-}
-
-function isSparkModel(model?: string | null): boolean {
-  return normalizeOptionalModel(model) === DEFAULT_SPARK_MODEL;
 }
 
 /**
@@ -521,7 +518,7 @@ export function normalizeTeamWorkerLaunchArgs(
       : null);
   const selectedModelProvider = preferredModelProviderOverride ?? parsed.modelProviderOverride;
   const selectedModel = normalizeOptionalModel(preferredModel) ?? normalizeOptionalModel(parsed.modelOverride);
-  const selectedReasoningSummary = isSparkModel(selectedModel)
+  const selectedReasoningSummary = isReasoningSummaryUnsupportedModel(selectedModel)
     ? `${REASONING_SUMMARY_KEY}="none"`
     : parsed.reasoningSummaryOverride;
   if (selectedModelProvider) normalized.push(CONFIG_FLAG, canonicalizeConfigStringOverride(selectedModelProvider, MODEL_PROVIDER_KEY));

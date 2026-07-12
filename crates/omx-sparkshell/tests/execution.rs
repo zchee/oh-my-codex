@@ -147,7 +147,7 @@ fn summary_mode_uses_local_api_and_model_override() {
     let output = Command::new(sparkshell_bin())
         .env("OMX_API_BASE_URL", base_url)
         .env("OMX_SPARKSHELL_LINES", "1")
-        .env("OMX_SPARKSHELL_MODEL", "gpt-5.3-codex-spark")
+        .env("OMX_SPARKSHELL_MODEL", "spark-test-model")
         .arg("sh")
         .arg("-c")
         .arg("printf 'one\ntwo\n'")

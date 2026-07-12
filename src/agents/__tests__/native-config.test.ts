@@ -75,6 +75,34 @@ afterEach(() => {
 });
 
 describe("agents/native-config", () => {
+  it("pins model_reasoning_summary=none only for spark-family resolved models", async () => {
+    const exploreToml = generateAgentToml(AGENT_DEFINITIONS.explore, "explore prompt");
+    assert.match(exploreToml, /model = "gpt-5\.6-luna"/);
+    assert.match(exploreToml, /model_reasoning_summary = "none"/);
+
+    const plannerToml = generateAgentToml(AGENT_DEFINITIONS.planner, "planner prompt");
+    assert.doesNotMatch(plannerToml, /model_reasoning_summary/);
+
+    const codexHome = await mkdtemp(join(tmpdir(), "omx-native-config-summary-"));
+    try {
+      await writeFile(
+        join(codexHome, ".omx-config.json"),
+        JSON.stringify({ agentModels: { explore: "gpt-5.3-codex-spark", verifier: "gpt-5.5" } }),
+      );
+      const legacySparkToml = generateAgentToml(AGENT_DEFINITIONS.explore, "explore prompt", {
+        codexHomeOverride: codexHome,
+      });
+      assert.match(legacySparkToml, /model_reasoning_summary = "none"/);
+
+      const summaryCapableToml = generateAgentToml(AGENT_DEFINITIONS.verifier, "verifier prompt", {
+        codexHomeOverride: codexHome,
+      });
+      assert.doesNotMatch(summaryCapableToml, /model_reasoning_summary/);
+    } finally {
+      await rm(codexHome, { recursive: true, force: true });
+    }
+  });
+
   it("generates TOML with stripped frontmatter and escaped triple quotes", () => {
     const agent: AgentDefinition = {
       name: "executor",
